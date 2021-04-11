@@ -1,30 +1,72 @@
-$uri = "ftp://172.20.10.1/foobar2000 Music Folder"
-$localFileName = "%d0%90%d0%ba%d0%b2%d0%b0%d1%80%d0%b8%d1%83%d0%bc-%d0%a1%d0%b5%d1%81%d1%82%d1%80%d0%b0 %d0%a5%d0%b0%d0%be%d1%81 [2002, %d0%a1%d0%be%d1%8e%d0%b7, SZCD 1429-02]-%d0%91%d1%80%d0%b0%d1%82 %d0%9d%d0%b8%d0%ba%d0%be%d1%82%d0%b8%d0%bd.mp3"
-$fileName = "ftp://10.10.0.103/foobar2000 Music Folder/%d0%90%d0%ba%d0%b2%d0%b0%d1%80%d0%b8%d1%83%d0%bc-%d0%a1%d0%b5%d1%81%d1%82%d1%80%d0%b0 %d0%a5%d0%b0%d0%be%d1%81 [2002, %d0%a1%d0%be%d1%8e%d0%b7, SZCD 1429-02]-%d0%91%d1%80%d0%b0%d1%82 %d0%9d%d0%b8%d0%ba%d0%be%d1%82%d0%b8%d0%bd.mp3"
+$uri = "ftp://10.10.0.106/foobar2000 Music Folder"
+
+function Get-FtpResponse {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string]$method
+    )
+
+    $ftpWebRequest = [System.Net.FtpWebRequest]::Create($uri)
+    $ftpWebRequest.Method = [System.Net.WebRequestMethods+Ftp]::$method
+    $ftpWebRequest.UseBinary = $true
+    $ftpCreds = New-Object -TypeName System.Net.NetworkCredential
+    $ftpCreds.UserName = "anonymous"
+    $ftpWebRequest.Credentials = $ftpCreds
+    return $ftpWebRequest.GetResponse()
+}
+function Get-DataFromStream {
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory=$true)]
+    [System.IO.Stream]$stream
+)
+}
 function Get-FtpContent {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
         [string]$uri
     )
-
-    $ftpWebRequest = [System.Net.FtpWebRequest]::Create($uri)
-    $ftpWebRequest.Method = [System.Net.WebRequestMethods+Ftp]::ListDirectoryDetails
-    
-    $ftpWebRequest.UseBinary = $true
-    $ftpCreds = New-Object -TypeName System.Net.NetworkCredential
-    $ftpCreds.UserName = "anonymous"
-    
-    $ftpWebRequest.Credentials = $ftpCreds
-
-    $ftpResponse = $ftpWebRequest.GetResponse()
-
+    $ftpMethod = "ListDirectoryDetails"
+    $ftpResponse = Get-FtpResponse -method $ftpMethod
     $responseStream = $ftpResponse.GetResponseStream()
-    
-    #$encoding = [System.Text.Encoding]::GetEncoding(URL)
-    $streamReader = New-Object -TypeName System.IO.StreamReader -ArgumentList $responseStream, $encoding, $true
-    
-    $detailedFilesList = $streamReader.ReadToEnd()
-    [System.Web.HttpUtility]::UrlDecode($localFileName)
+    $streamReader = New-Object -TypeName System.IO.StreamReader -ArgumentList $responseStream
+    $ftpContent = @()
+
+    DO {
+        [string]$dirItem = Get-DecodedUrlString -string ($streamReader.ReadLine())
+        $ftpContent += [PSCustomObject]@{
+            isDirectory = $dirItem.Substring(0,1).ToLower()
+            FileName = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[8]
+        }
+    } while ($streamReader.EndOfStream -eq $false)
+
+    $ftpResponse.Close()
+    return $ftpContent
     #TODO to check if the string is URL encoded we can decode and compare with the original
 }
+function Get-FtpFile {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string]$Path,
+        [Parameter(Mandatory=$true)]
+        [string]$uri
+    )
+    $ftpWebRequest = [System.Net.FtpWebRequest]::Create($uri)
+    $ftpWebRequest.Method = [System.Net.WebRequestMethods+Ftp]::ListDirectoryDetails
+    $ftpWebRequest.UseBinary = $true
+}
+function Get-DecodedUrlString {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string]$string
+    )
+    return [System.Web.HttpUtility]::UrlDecode($string)
+}
+
+
+
+$fileList = Get-FtpContent -uri $uri
