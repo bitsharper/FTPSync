@@ -62,9 +62,7 @@ function Get-FtpFile {
         [Parameter(Mandatory=$true)]
         [string]$uri
     )
-    $ftpWebRequest = [System.Net.FtpWebRequest]::Create($uri)
-    $ftpWebRequest.Method = [System.Net.WebRequestMethods+Ftp]::ListDirectoryDetails
-    $ftpWebRequest.UseBinary = $true
+    $ftpMethod = "ListDirectoryDetails"
 }
 function Get-DecodedUrlString {
     [CmdletBinding()]
