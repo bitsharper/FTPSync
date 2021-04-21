@@ -1,4 +1,4 @@
-$uri = "ftp://10.10.0.106/foobar2000 Music Folder"
+$uri = "ftp://172.20.10.1/foobar2000 Music Folder/"
 function Get-FtpResponse {
     [CmdletBinding()]
     Param(
@@ -10,7 +10,8 @@ function Get-FtpResponse {
     $ftpWebRequest.Method = [System.Net.WebRequestMethods+Ftp]::$method
     $ftpWebRequest.UseBinary = $true
     $ftpCreds = New-Object -TypeName System.Net.NetworkCredential
-    $ftpCreds.UserName = "anonymous"
+    $ftpCreds.UserName = "test"
+    $ftpCreds.Password = 'test'
     $ftpWebRequest.Credentials = $ftpCreds
     return $ftpWebRequest.GetResponse()
 }
@@ -28,6 +29,7 @@ function Get-DataFromStream {
     } while ($streamReader.EndOfStream -eq $false)
 
     return $data
+    $streamReader.Close()
 }
 function Get-FtpContent {
     [CmdletBinding()]
@@ -61,10 +63,19 @@ function Get-FtpFile {
         [string]$Path,
         [Parameter(Mandatory=$true)]
         [string]$uri
+        [Parameter(Mandatory=$true)]
+        [string]$fileName
     )
-    $ftpWebRequest = [System.Net.FtpWebRequest]::Create($uri)
-    $ftpWebRequest.Method = [System.Net.WebRequestMethods+Ftp]::ListDirectoryDetails
-    $ftpWebRequest.UseBinary = $true
+    $fileName ="test.txt"
+    if ($uri[$uri.Length-1] -eq '/')
+    {
+        $filePath = $uri + $fileName
+    }
+    $ftpMethod = "DownloadFile"
+    $ftpResponse = Get-FtpResponse -method $ftpMethod
+    $responseStream = $ftpResponse.GetResponseStream()
+    Get-DataFromStream -stream $responseStream
+    
 }
 function Get-DecodedUrlString {
     [CmdletBinding()]
@@ -74,7 +85,5 @@ function Get-DecodedUrlString {
     )
     return [System.Web.HttpUtility]::UrlDecode($string)
 }
-
-
 
 $fileList = Get-FtpContent -uri $uri
