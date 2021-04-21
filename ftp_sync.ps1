@@ -71,6 +71,9 @@ function Get-FtpFile {
     {
         $filePath = $uri + $fileName
     }
+    else {
+        $filePath = $uri + "/$($filename)"
+    }
     $ftpMethod = "DownloadFile"
     $ftpResponse = Get-FtpResponse -method $ftpMethod
     $responseStream = $ftpResponse.GetResponseStream()
