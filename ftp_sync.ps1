@@ -1,4 +1,4 @@
-$uri = "ftp://172.20.10.1/foobar2000 Music Folder/"
+$uri = "ftp://10.10.0.106/foobar2000 Music Folder/"
 function Get-FtpResponse {
     [CmdletBinding()]
     Param(
@@ -42,7 +42,7 @@ function Get-FtpContent {
     $ftpContent = @()
 
     $ftpMethod = "ListDirectoryDetails"
-    $ftpResponse = Get-FtpResponse -method $ftpMethod
+    $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $uri
     $responseStream = $ftpResponse.GetResponseStream()
     
     $fileList = Get-DataFromStream -stream $responseStream
@@ -66,18 +66,19 @@ function Get-FtpFile {
         [Parameter(Mandatory=$true)]
         [string]$FileName
     )
-    $FileName ="test.txt"
+    
     if ($Uri[$Uri.Length-1] -eq '/')
     {
-        $ftpFilePath = $Uri + $fileName
+        $ftpFilePath = $Uri + $(Get-EecodedUrlString -string $FileName)
     }
     else {
-        $ftpFilePath = $Uri + "/$($filename)"
+        $ftpFilePath =  $Uri + "/$(Get-EecodedUrlString -string $Filename)"
     }
+    write-host $ftpFilePath
     $ftpMethod = "DownloadFile"
     $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $ftpFilePath
     $responseStream = $ftpResponse.GetResponseStream()
-    Get-DataFromStream -stream $responseStream
+    $fileData = Get-DataFromStream -stream $responseStream
     
 }
 function Get-DecodedUrlString {
@@ -87,6 +88,14 @@ function Get-DecodedUrlString {
         [string]$string
     )
     return [System.Web.HttpUtility]::UrlDecode($string)
+}
+function Get-EecodedUrlString {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string]$string
+    )
+    return [System.Web.HttpUtility]::UrlEncode($string)
 }
 
 $fileList = Get-FtpContent -uri $uri
