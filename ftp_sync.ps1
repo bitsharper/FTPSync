@@ -3,7 +3,9 @@ function Get-FtpResponse {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
-        [string]$method
+        [string]$method,
+        [Parameter(Mandatory=$true)]
+        [string]$uri
     )
 
     $ftpWebRequest = [System.Net.FtpWebRequest]::Create($uri)
@@ -60,22 +62,20 @@ function Get-FtpFile {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
-        [string]$Path,
+        [string]$Uri,
         [Parameter(Mandatory=$true)]
-        [string]$uri
-        [Parameter(Mandatory=$true)]
-        [string]$fileName
+        [string]$FileName
     )
-    $fileName ="test.txt"
-    if ($uri[$uri.Length-1] -eq '/')
+    $FileName ="test.txt"
+    if ($Uri[$Uri.Length-1] -eq '/')
     {
-        $filePath = $uri + $fileName
+        $ftpFilePath = $Uri + $fileName
     }
     else {
-        $filePath = $uri + "/$($filename)"
+        $ftpFilePath = $Uri + "/$($filename)"
     }
     $ftpMethod = "DownloadFile"
-    $ftpResponse = Get-FtpResponse -method $ftpMethod
+    $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $ftpFilePath
     $responseStream = $ftpResponse.GetResponseStream()
     Get-DataFromStream -stream $responseStream
     
