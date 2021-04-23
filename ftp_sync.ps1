@@ -64,22 +64,28 @@ function Get-FtpFile {
         [Parameter(Mandatory=$true)]
         [string]$Uri,
         [Parameter(Mandatory=$true)]
-        [string]$FileName
+        [string]$FileName,
+        [Parameter(Mandatory=$true)]
+        [string]$Destination
     )
     
-    if ($Uri[$Uri.Length-1] -eq '/')
-    {
-        $ftpFilePath = $Uri + $(Get-EecodedUrlString -string $FileName)
+    if ($Uri[$Uri.Length-1] -eq '/') {
+        $ftpFilePath = $Uri + $($FileName)
     }
     else {
-        $ftpFilePath =  $Uri + "/$(Get-EecodedUrlString -string $Filename)"
+        $ftpFilePath =  $Uri + "/$($Filename)"
     }
+    
     write-host $ftpFilePath
     $ftpMethod = "DownloadFile"
+    $fileStream = New-Object System.IO.FileStream $Destination\$ftpFilePath, 'Append', 'Write', 'Read'
     $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $ftpFilePath
-    $responseStream = $ftpResponse.GetResponseStream()
-    $fileData = Get-DataFromStream -stream $responseStream
+    $ftpResponseStream = $ftpResponse.GetResponseStream()
     
+    $ftpResponseStream.CopyTo($fileStream)
+    $fileStream.Dispose()
+    $responseStream.Dispose()
+    $ftpResponseStream.Close()
 }
 function Get-DecodedUrlString {
     [CmdletBinding()]
@@ -98,4 +104,8 @@ function Get-EecodedUrlString {
     return [System.Web.HttpUtility]::UrlEncode($string)
 }
 
-$fileList = Get-FtpContent -uri $uri
+$filesList = Get-FtpContent -uri $uri
+
+foreach ($file in $filesList) {
+    Get-FtpFile -Uri $uri -FileName $file.FileName -Destination "c:\tmp"
+}
