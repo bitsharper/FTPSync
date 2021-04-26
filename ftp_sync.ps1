@@ -21,9 +21,9 @@ function Get-DataFromStream {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
-        [System.IO.Stream]$stream
+        [System.IO.Stream]$Stream
     )
-    $streamReader = New-Object -TypeName System.IO.StreamReader -ArgumentList $stream
+    $streamReader = New-Object -TypeName System.IO.StreamReader -ArgumentList $Stream
     $data = @()
 
     DO {
@@ -78,28 +78,33 @@ function Get-FtpFile {
     
     write-host $ftpFilePath
     $ftpMethod = "DownloadFile"
-    $fileStream = New-Object System.IO.FileStream $Destination\$ftpFilePath, 'Append', 'Write', 'Read'
+    $fileStream = New-Object System.IO.FileStream $Destination\$FileName, 'Append', 'Write', 'Read'
     $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $ftpFilePath
     $ftpResponseStream = $ftpResponse.GetResponseStream()
     
     $ftpResponseStream.CopyTo($fileStream)
     $fileStream.Dispose()
-    $responseStream.Dispose()
+    #$responseStream.Dispose()
     $ftpResponseStream.Close()
 }
 function Get-DecodedUrlString {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
-        [string]$string
+        [string]$String
     )
-    return [System.Web.HttpUtility]::UrlDecode($string)
+    
+    if ($String.Contains("+")) {
+        $String = $String.Replace("+", "%2b")
+        return [System.Net.WebUtility]::UrlDecode($String)
+    }
+    return [System.Net.WebUtility]::UrlDecode($String)
 }
-function Get-EecodedUrlString {
+function Get-EncodedUrlString {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
-        [string]$string
+        [string]$String
     )
     return [System.Web.HttpUtility]::UrlEncode($string)
 }
@@ -109,3 +114,4 @@ $filesList = Get-FtpContent -uri $uri
 foreach ($file in $filesList) {
     Get-FtpFile -Uri $uri -FileName $file.FileName -Destination "c:\tmp"
 }
+
