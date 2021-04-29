@@ -87,6 +87,37 @@ function Get-FtpFile {
     #$responseStream.Dispose()
     $ftpResponseStream.Close()
 }
+
+function Copy-FileToFtp {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string]$Uri,
+        [Parameter(Mandatory=$true)]
+        [string]$LocalPath
+    )
+    if (Test-Path -LiteralPath $LocalPath) {
+        $fileName = $LocalPath
+    }
+   
+    if ($Uri[$Uri.Length-1] -eq '/') {
+        $ftpFilePath = $Uri + $($FileName)
+    }
+    else {
+        $ftpFilePath =  $Uri + "/$($Filename)"
+    }
+    
+    write-host "File will be uploaded to: $ftpFilePath
+    $ftpMethod = "DownloadFile"
+    $fileStream = New-Object System.IO.FileStream $Destination\$FileName, 'Append', 'Write', 'Read'
+    $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $ftpFilePath
+    $ftpResponseStream = $ftpResponse.GetResponseStream()
+    
+    $ftpResponseStream.CopyTo($fileStream)
+    $fileStream.Dispose()
+    #$responseStream.Dispose()
+    $ftpResponseStream.Close()
+}
 function ConvertFrom-UrlString {
     [CmdletBinding()]
     Param(
