@@ -47,7 +47,7 @@ function Get-FtpContent {
     
     $fileList = Get-DataFromStream -stream $responseStream
     foreach ($str in $fileList) {
-        [string]$dirItem = Get-DecodedUrlString -string $str
+        [string]$dirItem = ConvertFrom-UrlString -string $str
         $ftpContent += [PSCustomObject]@{
             isDirectory = $dirItem.Substring(0,1).ToLower()
             FileSize = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[4]
@@ -87,7 +87,7 @@ function Get-FtpFile {
     #$responseStream.Dispose()
     $ftpResponseStream.Close()
 }
-function Get-DecodedUrlString {
+function ConvertFrom-UrlString {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
@@ -100,7 +100,7 @@ function Get-DecodedUrlString {
     }
     return [System.Net.WebUtility]::UrlDecode($String)
 }
-function Get-EncodedUrlString {
+function ConvertTo-UrlString {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
