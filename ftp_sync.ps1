@@ -7,7 +7,7 @@ function Get-FtpResponse {
         [Parameter(Mandatory=$true)]
         [string]$uri
     )
-
+    #$method = "ListDirectoryDetails"
     $ftpWebRequest = [System.Net.FtpWebRequest]::Create($uri)
     $ftpWebRequest.Method = [System.Net.WebRequestMethods+Ftp]::$method
     $ftpWebRequest.UseBinary = $true
@@ -33,14 +33,13 @@ function Get-DataFromStream {
     return $data
     $streamReader.Close()
 }
-function Get-FtpContent {
+function Get-FtpDirectoryContent {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
-        [string]$uri
+        [string]$Uri
     )
     $ftpContent = @()
-
     $ftpMethod = "ListDirectoryDetails"
     $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $uri
     $responseStream = $ftpResponse.GetResponseStream()
@@ -58,7 +57,7 @@ function Get-FtpContent {
     return $ftpContent
     #TODO to check if the string is URL encoded we can decode and compare with the original
 }
-function Get-FtpFile {
+function Copy-FileFromFtp {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
@@ -66,7 +65,7 @@ function Get-FtpFile {
         [Parameter(Mandatory=$true)]
         [string]$FileName,
         [Parameter(Mandatory=$true)]
-        [string]$Destination
+        [string]$LocalPath
     )
     
     if ($Uri[$Uri.Length-1] -eq '/') {
@@ -78,7 +77,7 @@ function Get-FtpFile {
     
     write-host $ftpFilePath
     $ftpMethod = "DownloadFile"
-    $fileStream = New-Object System.IO.FileStream $Destination\$FileName, 'Append', 'Write', 'Read'
+    $fileStream = New-Object System.IO.FileStream $LocalPath\$FileName, 'Append', 'Write', 'Read'
     $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $ftpFilePath
     $ftpResponseStream = $ftpResponse.GetResponseStream()
     
@@ -98,7 +97,9 @@ function Get-DecodedUrlString {
         $String = $String.Replace("+", "%2b")
         return [System.Net.WebUtility]::UrlDecode($String)
     }
-    return [System.Net.WebUtility]::UrlDecode($String)
+    else {
+        return [System.Net.WebUtility]::UrlDecode($String)
+    }
 }
 function Get-EncodedUrlString {
     [CmdletBinding()]
@@ -109,9 +110,16 @@ function Get-EncodedUrlString {
     return [System.Web.HttpUtility]::UrlEncode($string)
 }
 
-$filesList = Get-FtpContent -uri $uri
+$filesList = Get-FtpDirectoryContent -uri $uri
 
 foreach ($file in $filesList) {
-    Get-FtpFile -Uri $uri -FileName $file.FileName -Destination "c:\tmp"
-}
+    if ($file.isDirectory.ToLower() -eq "d") {
 
+        $localDir = New-Item -Path c:\tmp\$($file.FileName) -ItemType Directory 
+        #$remoteDir = $uri+$(file.FileName)+"/"
+        #$dirContent = Get-FtpDirectoryContent -Uri $remoteDir
+        
+    } else {
+        Copy-FileFromFtp -Uri $uri -FileName $file.FileName -LocalPath "c:\tmp"
+    }
+}
