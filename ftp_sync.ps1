@@ -3,13 +3,16 @@ function Get-FtpResponse {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
-        [string]$method,
+        [string]$Method,
         [Parameter(Mandatory=$true)]
-        [string]$uri
+        [string]$Uri,
+        [Parameter(Mandatory=$false)]
+        [System.IO.FileStream]$FileStream
     )
-    #$method = "ListDirectoryDetails"
-    $ftpWebRequest = [System.Net.FtpWebRequest]::Create($uri)
-    $ftpWebRequest.Method = [System.Net.WebRequestMethods+Ftp]::$method
+    #$Method = "ListDirectoryDetails"
+    $ftpWebRequest = [System.Net.FtpWebRequest]::Create($Uri)
+    [System.IO.FileStream]
+    $ftpWebRequest.Method = [System.Net.WebRequestMethods+Ftp]::$Method
     $ftpWebRequest.UseBinary = $true
     $ftpCreds = New-Object -TypeName System.Net.NetworkCredential
     $ftpCreds.UserName = "test"
@@ -77,13 +80,13 @@ function Copy-FileFromFtp {
     
     write-host $ftpFilePath
     $ftpMethod = "DownloadFile"
-    $fileStream = New-Object System.IO.FileStream $LocalPath\$FileName, 'Append', 'Write', 'Read'
+    $fileStream = New-Object System.IO.FileStream $LocalPath, 'Append', 'Write', 'Read'
     $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $ftpFilePath
     $ftpResponseStream = $ftpResponse.GetResponseStream()
     
     $ftpResponseStream.CopyTo($fileStream)
     $fileStream.Dispose()
-    #$responseStream.Dispose()
+    # TODO check $responseStream.Dispose()
     $ftpResponseStream.Close()
 }
 
@@ -95,26 +98,27 @@ function Copy-FileToFtp {
         [Parameter(Mandatory=$true)]
         [string]$LocalPath
     )
+    $ftpMethod = "UploadFile"
+    $LocalPath = "C:\tmp\01 - Давай Микрофон.flac"
+    $fileStream = New-Object System.IO.FileStream $LocalPath, 'Append', 'Write', 'Read'
     if (Test-Path -LiteralPath $LocalPath) {
-        $fileName = $LocalPath
+        $fileName = Split-Path -Leaf $LocalPath 
     }
    
     if ($Uri[$Uri.Length-1] -eq '/') {
-        $ftpFilePath = $Uri + $($FileName)
+        $ftpFilePath = $Uri + $FileName
     }
     else {
-        $ftpFilePath =  $Uri + "/$($Filename)"
+        $ftpFilePath =  $Uri/$fileName
     }
     
-    write-host "File will be uploaded to: $ftpFilePath
-    $ftpMethod = "DownloadFile"
-    $fileStream = New-Object System.IO.FileStream $Destination\$FileName, 'Append', 'Write', 'Read'
-    $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $ftpFilePath
+    write-host "File will be uploaded to: " $ftpFilePath
+        
+    $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $ftpFilePath -FileStream $fileStream
     $ftpResponseStream = $ftpResponse.GetResponseStream()
     
     $ftpResponseStream.CopyTo($fileStream)
     $fileStream.Dispose()
-    #$responseStream.Dispose()
     $ftpResponseStream.Close()
 }
 function ConvertFrom-UrlString {
