@@ -46,7 +46,7 @@ function Get-FtpDirectoryContent {
     
     $fileList = Get-DataFromStream -stream $responseStream
     foreach ($str in $fileList) {
-        [string]$dirItem = Get-DecodedUrlString -string $str
+        [string]$dirItem = ConvertFrom-UrlString -string $str
         $ftpContent += [PSCustomObject]@{
             isDirectory = $dirItem.Substring(0,1).ToLower()
             FileSize = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[4]
@@ -86,7 +86,38 @@ function Copy-FileFromFtp {
     #$responseStream.Dispose()
     $ftpResponseStream.Close()
 }
-function Get-DecodedUrlString {
+
+function Copy-FileToFtp {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [string]$Uri,
+        [Parameter(Mandatory=$true)]
+        [string]$LocalPath
+    )
+    if (Test-Path -LiteralPath $LocalPath) {
+        $fileName = $LocalPath
+    }
+   
+    if ($Uri[$Uri.Length-1] -eq '/') {
+        $ftpFilePath = $Uri + $($FileName)
+    }
+    else {
+        $ftpFilePath =  $Uri + "/$($Filename)"
+    }
+    
+    write-host "File will be uploaded to: $ftpFilePath
+    $ftpMethod = "DownloadFile"
+    $fileStream = New-Object System.IO.FileStream $Destination\$FileName, 'Append', 'Write', 'Read'
+    $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $ftpFilePath
+    $ftpResponseStream = $ftpResponse.GetResponseStream()
+    
+    $ftpResponseStream.CopyTo($fileStream)
+    $fileStream.Dispose()
+    #$responseStream.Dispose()
+    $ftpResponseStream.Close()
+}
+function ConvertFrom-UrlString {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
@@ -101,7 +132,7 @@ function Get-DecodedUrlString {
         return [System.Net.WebUtility]::UrlDecode($String)
     }
 }
-function Get-EncodedUrlString {
+function ConvertTo-UrlString {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
