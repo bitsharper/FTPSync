@@ -11,7 +11,6 @@ function Get-FtpResponse {
     )
     #$Method = "ListDirectoryDetails"
     $ftpWebRequest = [System.Net.FtpWebRequest]::Create($Uri)
-    [System.IO.FileStream]
     $ftpWebRequest.Method = [System.Net.WebRequestMethods+Ftp]::$Method
     $ftpWebRequest.UseBinary = $true
     $ftpCreds = New-Object -TypeName System.Net.NetworkCredential
@@ -20,6 +19,7 @@ function Get-FtpResponse {
     $ftpWebRequest.Credentials = $ftpCreds
     return $ftpWebRequest.GetResponse()
 }
+
 function Get-DataFromStream {
     [CmdletBinding()]
     Param(
