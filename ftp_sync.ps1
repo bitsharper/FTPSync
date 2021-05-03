@@ -100,7 +100,7 @@ function Copy-FileToFtp {
     )
     $ftpMethod = "UploadFile"
     $LocalPath = "C:\tmp\01 - Давай Микрофон.flac"
-    $fileStream = New-Object System.IO.FileStream $LocalPath, 'Append', 'Write', 'Read'
+    $fileStream = New-Object System.IO.FileStream $LocalPath, 'Create', 'Write', 'Read'
     if (Test-Path -LiteralPath $LocalPath) {
         $fileName = Split-Path -Leaf $LocalPath 
     }
