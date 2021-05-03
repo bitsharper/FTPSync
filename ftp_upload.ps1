@@ -27,10 +27,10 @@ function Write-DataToStream {
         [Parameter(Mandatory=$true)]
         [String]$LocalPath
     )
-    $fileStream = New-Object System.IO.FileStream $LocalPath, 'Create', 'Write', 'Read'
-    [byte[]] $fileContent = $fileStream.ReadToEnd()
+    $localPath = 
+    $fileStream = New-Object System.IO.FileStream $LocalPath, 'Open', 'Read', 'Read'
+    $fileStream.CopyTo($Stream)
     $fileStream.close()
-    $Stream.Write($fileContent, 0, $fileContent.Length)
     $Stream.Close()
 }
 function Copy-FileToFtp {
@@ -41,8 +41,9 @@ function Copy-FileToFtp {
         [Parameter(Mandatory=$true)]
         [string]$LocalPath
     )
+
     $ftpMethod = "UploadFile"
-    [string]$LocalPath = "C:\tmp\test.mp3"
+    [string]$LocalPath = "C:\tmp\14 - Кирпичи Тяжелы.flac"
     
     if (Test-Path -LiteralPath $LocalPath) {
         [string]$fileName = Split-Path -Leaf $LocalPath 

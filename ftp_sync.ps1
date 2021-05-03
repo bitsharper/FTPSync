@@ -1,13 +1,12 @@
-$uri = "ftp://10.10.0.106/foobar2000 Music Folder/"
-function Get-FtpResponse {
+#$uri = "ftp://10.10.0.106/foobar2000 Music Folder/"
+$uri = "ftp://172.26.7.184/"
+function Get-FtpRequest {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
         [string]$Method,
         [Parameter(Mandatory=$true)]
-        [string]$Uri,
-        [Parameter(Mandatory=$false)]
-        [System.IO.FileStream]$FileStream
+        [string]$Uri
     )
     #$Method = "ListDirectoryDetails"
     $ftpWebRequest = [System.Net.FtpWebRequest]::Create($Uri)
@@ -17,9 +16,8 @@ function Get-FtpResponse {
     $ftpCreds.UserName = "test"
     $ftpCreds.Password = 'test'
     $ftpWebRequest.Credentials = $ftpCreds
-    return $ftpWebRequest.GetResponse()
+    return $ftpWebRequest
 }
-
 function Get-DataFromStream {
     [CmdletBinding()]
     Param(
@@ -36,6 +34,20 @@ function Get-DataFromStream {
     return $data
     $streamReader.Close()
 }
+function Write-DataToStream {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true)]
+        [System.IO.Stream]$Stream,
+        [Parameter(Mandatory=$true)]
+        [String]$LocalPath
+    )
+    $localPath = 
+    $fileStream = New-Object System.IO.FileStream $LocalPath, 'Open', 'Read', 'Read'
+    $fileStream.CopyTo($Stream)
+    $fileStream.close()
+    $Stream.Close()
+}
 function Get-FtpDirectoryContent {
     [CmdletBinding()]
     Param(
@@ -44,10 +56,11 @@ function Get-FtpDirectoryContent {
     )
     $ftpContent = @()
     $ftpMethod = "ListDirectoryDetails"
-    $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $uri
-    $responseStream = $ftpResponse.GetResponseStream()
+    $ftpRequest = Get-FtpRequest -Method $ftpMethod -Uri $uri
+    $ftpResponse = $ftpRequest.GetResponse()
+    $ftpResponseStream = $ftpResponse.GetResponseStream()
     
-    $fileList = Get-DataFromStream -stream $responseStream
+    $fileList = Get-DataFromStream -stream $ftpResponseStream
     foreach ($str in $fileList) {
         [string]$dirItem = ConvertFrom-UrlString -string $str
         $ftpContent += [PSCustomObject]@{
@@ -56,6 +69,7 @@ function Get-FtpDirectoryContent {
             FileName = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[8]
         }
     }
+    $ftpResponseStream.Close()
     $ftpResponse.Close()
     return $ftpContent
     #TODO to check if the string is URL encoded we can decode and compare with the original
@@ -78,18 +92,18 @@ function Copy-FileFromFtp {
         $ftpFilePath =  $Uri + "/$($Filename)"
     }
     
-    write-host $ftpFilePath
+    Write-Host Starting copying file $ftpFilePath to $Local
     $ftpMethod = "DownloadFile"
-    $fileStream = New-Object System.IO.FileStream $LocalPath, 'Append', 'Write', 'Read'
-    $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $ftpFilePath
+    $fileStream = New-Object System.IO.FileStream $LocalPath, 'Create', 'Write', 'Read'
+    $ftpRequest = Get-FtpRequest -method $ftpMethod -uri $ftpFilePath
+    $ftpResponse = $ftpRequest.GetResponse()
     $ftpResponseStream = $ftpResponse.GetResponseStream()
     
     $ftpResponseStream.CopyTo($fileStream)
-    $fileStream.Dispose()
+    $fileStream.Close()
     # TODO check $responseStream.Dispose()
     $ftpResponseStream.Close()
 }
-
 function Copy-FileToFtp {
     [CmdletBinding()]
     Param(
@@ -98,28 +112,25 @@ function Copy-FileToFtp {
         [Parameter(Mandatory=$true)]
         [string]$LocalPath
     )
+
     $ftpMethod = "UploadFile"
-    $LocalPath = "C:\tmp\01 - Давай Микрофон.flac"
-    $fileStream = New-Object System.IO.FileStream $LocalPath, 'Create', 'Write', 'Read'
+    
     if (Test-Path -LiteralPath $LocalPath) {
-        $fileName = Split-Path -Leaf $LocalPath 
+        [string]$fileName = Split-Path -Leaf $LocalPath 
     }
    
     if ($Uri[$Uri.Length-1] -eq '/') {
-        $ftpFilePath = $Uri + $FileName
+        [string]$ftpFilePath = $Uri + $FileName
     }
     else {
-        $ftpFilePath =  $Uri/$fileName
+        $ftpFilePath =  $Uri + "/" + $fileName
     }
     
     write-host "File will be uploaded to: " $ftpFilePath
         
-    $ftpResponse = Get-FtpResponse -method $ftpMethod -uri $ftpFilePath -FileStream $fileStream
-    $ftpResponseStream = $ftpResponse.GetResponseStream()
-    
-    $ftpResponseStream.CopyTo($fileStream)
-    $fileStream.Dispose()
-    $ftpResponseStream.Close()
+    $ftpRequest = Get-FtpRequest -method $ftpMethod -uri $ftpFilePath
+    $ftpRequestStream = $ftpRequest.GetRequestStream()
+    Write-DataToStream -Stream $ftpRequestStream -LocalPath $LocalPath
 }
 function ConvertFrom-UrlString {
     [CmdletBinding()]
@@ -146,6 +157,8 @@ function ConvertTo-UrlString {
 }
 
 $filesList = Get-FtpDirectoryContent -uri $uri
+copy-fileFromFtp -Uri $uri -FileName "test1.txt" -LocalPath "c:\tmp\test1.txt"
+Copy-FileToFtp -Uri $uri -LocalPath "C:\tmp\14 - Кирпичи Тяжелы.flac"
 
 foreach ($file in $filesList) {
     if ($file.isDirectory.ToLower() -eq "d") {
