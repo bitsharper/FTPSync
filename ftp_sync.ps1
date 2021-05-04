@@ -30,9 +30,8 @@ function Get-DataFromStream {
     DO {
         $data += $streamReader.ReadLine()
     } while ($streamReader.EndOfStream -eq $false)
-
-    return $data
     $streamReader.Close()
+    return $data
 }
 function Write-DataToStream {
     [CmdletBinding()]
@@ -60,7 +59,7 @@ function Get-FtpDirectoryContent {
     $ftpResponse = $ftpRequest.GetResponse()
     $ftpResponseStream = $ftpResponse.GetResponseStream()
     
-    $fileList = Get-DataFromStream -stream $ftpResponseStream
+    $fileList = Get-DataFromStream -Stream $ftpResponseStream
     foreach ($str in $fileList) {
         [string]$dirItem = ConvertFrom-UrlString -string $str
         $ftpContent += [PSCustomObject]@{
@@ -157,8 +156,8 @@ function ConvertTo-UrlString {
 }
 
 $filesList = Get-FtpDirectoryContent -uri $uri
-copy-fileFromFtp -Uri $uri -FileName "test1.txt" -LocalPath "c:\tmp\test1.txt"
-Copy-FileToFtp -Uri $uri -LocalPath "C:\tmp\14 - Кирпичи Тяжелы.flac"
+#Copy-FileFromFtp -Uri $uri -FileName "test1.txt" -LocalPath "c:\tmp\test1.txt"
+#Copy-FileToFtp -Uri $uri -LocalPath "C:\tmp\14 - Кирпичи Тяжелы.flac"
 
 foreach ($file in $filesList) {
     if ($file.isDirectory.ToLower() -eq "d") {
