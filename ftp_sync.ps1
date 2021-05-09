@@ -1,5 +1,5 @@
-#$uri = "ftp://10.10.0.106/foobar2000 Music Folder/"
-$uri = "ftp://172.26.7.184/"
+$uri = "ftp://10.10.0.106/foobar2000 Music Folder/"
+#$uri = "ftp://172.26.7.184/"
 function Get-FtpRequest {
     [CmdletBinding()]
     Param(
@@ -52,7 +52,10 @@ function Get-FtpDirectoryContent {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
-        [string]$Uri
+        [string]$Uri,
+        [Parameter(Mandatory=$false)]
+        [string]$Recurse
+        
     )
     $ftpContent = @()
     $ftpMethod = "ListDirectoryDetails"
@@ -62,9 +65,10 @@ function Get-FtpDirectoryContent {
     
     $fileList = Get-DataFromStream -stream $ftpResponseStream
     foreach ($str in $fileList) {
+         
         [string]$dirItem = ConvertFrom-UrlString -string $str
         $ftpContent += [PSCustomObject]@{
-            isDirectory = $dirItem.Substring(0,1).ToLower()
+            isDirectory = if ($dirItem.Substring(0,1).ToLower() -eq 'd') {"true"} else {"false"}
             FileSize = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[4]
             FileName = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[8]
         }
@@ -156,9 +160,15 @@ function ConvertTo-UrlString {
     return [System.Web.HttpUtility]::UrlEncode($string)
 }
 
-$filesList = Get-FtpDirectoryContent -uri $uri
+$rootContent = Get-FtpDirectoryContent -uri $uri
+
+function Get-ChildContent () {
+
+
+}
+
 copy-fileFromFtp -Uri $uri -FileName "test1.txt" -LocalPath "c:\tmp\test1.txt"
-Copy-FileToFtp -Uri $uri -LocalPath "C:\tmp\14 - Кирпичи Тяжелы.flac"
+Copy-FileToFtp -Uri $uri -LocalPath "C:\tmp\01 - Давай Микрофон.flac"
 
 foreach ($file in $filesList) {
     if ($file.isDirectory.ToLower() -eq "d") {
