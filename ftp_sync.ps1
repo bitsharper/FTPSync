@@ -1,5 +1,5 @@
 #$uri = "ftp://10.10.0.106/foobar2000 Music Folder/"
-$uri = "ftp://172.26.7.184/"
+$uri = "ftp://172.31.145.224/"
 function Get-FtpRequest {
     [CmdletBinding()]
     Param(
@@ -65,7 +65,7 @@ function Get-FtpDirectoryContent {
     foreach ($str in $fileList) {
         [string]$dirItem = ConvertFrom-UrlString -string $str
         $ftpContent += [PSCustomObject]@{
-            isDirectory = if ($dirItem.Substring(0,1).ToLower() -eq 'd') {"true"} else {"false"}
+            isDirectory = if ($dirItem.Substring(0,1).ToLower() -eq 'd') {$true} else {$false}
             FileSize = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[4]
             FileName = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[8]
         }
@@ -121,7 +121,7 @@ function Copy-FileToFtp {
     }
    
     if ($Uri[$Uri.Length-1] -eq '/') {
-    \?.m  
+
         [string]$ftpFilePath = $Uri + $FileName
     }
     else {
@@ -160,7 +160,8 @@ function ConvertTo-UrlString {
 
 $rootContent = Get-FtpDirectoryContent -uri $uri
 
-function Get-ChildContent () {
+
+function Get-ChildDirContent () {
 
 
 }
