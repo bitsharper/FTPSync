@@ -55,6 +55,8 @@ function Get-FtpDirectoryContent {
         [Parameter(Mandatory=$false)]
         [string]$Recurse
     )
+
+    $ftpDirectories = @()
     $ftpContent = @()
     $ftpMethod = "ListDirectoryDetails"
     $ftpRequest = Get-FtpRequest -Method $ftpMethod -Uri $uri
@@ -62,9 +64,12 @@ function Get-FtpDirectoryContent {
     $ftpResponseStream = $ftpResponse.GetResponseStream()
     
     $fileList = Get-DataFromStream -Stream $ftpResponseStream
+
     foreach ($str in $fileList) {
         [string]$dirItem = ConvertFrom-UrlString -string $str
         $ftpContent += [PSCustomObject]@{
+            #Directory = $Uri.split("/", 3, [system.stringSplitOptions]::RemoveEmptyEntries)[-1]
+            Directory = $Uri.Substring($Uri.LastIndexOf("/"))
             isDirectory = if ($dirItem.Substring(0,1).ToLower() -eq 'd') {$true} else {$false}
             FileSize = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[4]
             FileName = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[8]
@@ -159,24 +164,3 @@ function ConvertTo-UrlString {
 }
 
 $rootContent = Get-FtpDirectoryContent -uri $uri
-
-
-function Get-ChildDirContent () {
-
-
-}
-
-copy-fileFromFtp -Uri $uri -FileName "test1.txt" -LocalPath "c:\tmp\test1.txt"
-Copy-FileToFtp -Uri $uri -LocalPath "C:\tmp\01 - Давай Микрофон.flac"
-
-foreach ($file in $filesList) {
-    if ($file.isDirectory.ToLower() -eq "d") {
-
-        $localDir = New-Item -Path c:\tmp\$($file.FileName) -ItemType Directory 
-        #$remoteDir = $uri+$(file.FileName)+"/"
-        #$dirContent = Get-FtpDirectoryContent -Uri $remoteDir
-        
-    } else {
-        Copy-FileFromFtp -Uri $uri -FileName $file.FileName -LocalPath "c:\tmp"
-    }
-}
