@@ -57,6 +57,14 @@ function Get-FtpDirectoryContent {
         [string]$Recurse
         
     )
+    $ftpDirectories = [PSCustomObject]@{
+        DirectoryName = '' 
+        Items = [PSCustomObject]@{
+            "isDirectory" = ''  
+
+        }
+    }
+    
     $ftpContent = @()
     $ftpMethod = "ListDirectoryDetails"
     $ftpRequest = Get-FtpRequest -Method $ftpMethod -Uri $uri
@@ -65,12 +73,14 @@ function Get-FtpDirectoryContent {
     
     $fileList = Get-DataFromStream -stream $ftpResponseStream
     foreach ($str in $fileList) {
-         
         [string]$dirItem = ConvertFrom-UrlString -string $str
+        $ftpDirectories.DirectoryName = '/'
+
+
         $ftpContent += [PSCustomObject]@{
-            isDirectory = if ($dirItem.Substring(0,1).ToLower() -eq 'd') {"true"} else {"false"}
-            FileSize = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[4]
-            FileName = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[8]
+            "isDirectory" = if ($dirItem.Substring(0,1).ToLower() -eq 'd') {$true} else {$false}
+            "FileSize" = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[4]
+            "FileName" = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[8]
         }
     }
     $ftpResponseStream.Close()
