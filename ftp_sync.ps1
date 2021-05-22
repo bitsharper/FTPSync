@@ -1,5 +1,6 @@
-$uri = "ftp://10.10.0.106/foobar2000 Music Folder/"
-#$uri = "ftp://172.26.7.184/"
+#$uri = "ftp://10.10.0.102/foobar2000 Music Folder/"
+$uri = New-Object -TypeName System.Uri -ArgumentList "ftp://10.10.0.106/foobar2000 Music Folder/"
+#$uri = "ftp://172.31.145.224/"
 function Get-FtpRequest {
     [CmdletBinding()]
     Param(
@@ -13,7 +14,7 @@ function Get-FtpRequest {
     $ftpWebRequest.Method = [System.Net.WebRequestMethods+Ftp]::$Method
     $ftpWebRequest.UseBinary = $true
     $ftpCreds = New-Object -TypeName System.Net.NetworkCredential
-    $ftpCreds.UserName = "test"
+    $ftpCreds.UserName = 'test'
     $ftpCreds.Password = 'test'
     $ftpWebRequest.Credentials = $ftpCreds
     return $ftpWebRequest
@@ -30,9 +31,8 @@ function Get-DataFromStream {
     DO {
         $data += $streamReader.ReadLine()
     } while ($streamReader.EndOfStream -eq $false)
-
-    return $data
     $streamReader.Close()
+    return $data
 }
 function Write-DataToStream {
     [CmdletBinding()]
@@ -52,40 +52,44 @@ function Get-FtpDirectoryContent {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
-        [string]$Uri,
+        [System.Uri]$Uri,
         [Parameter(Mandatory=$false)]
-        [string]$Recurse
-        
+        [bool]$Recurse
     )
-    $ftpDirectories = [PSCustomObject]@{
-        DirectoryName = '' 
-        Items = [PSCustomObject]@{
-            "isDirectory" = ''  
 
-        }
+    $ftpContent = [PSCustomObject]@{
+        DirectoryName = @()
+        DirectoryItems = @()
     }
-    
-    $ftpContent = @()
+    $ftpDirectory = @()
+    $Recurse = $true
     $ftpMethod = "ListDirectoryDetails"
-    $ftpRequest = Get-FtpRequest -Method $ftpMethod -Uri $uri
+    $ftpRequest = Get-FtpRequest -Method $ftpMethod -Uri $uri.OriginalString
     $ftpResponse = $ftpRequest.GetResponse()
     $ftpResponseStream = $ftpResponse.GetResponseStream()
     
-    $fileList = Get-DataFromStream -stream $ftpResponseStream
+    $fileList = Get-DataFromStream -Stream $ftpResponseStream
+    $ftpContent.DirectoryName = $Uri.LocalPath
     foreach ($str in $fileList) {
         [string]$dirItem = ConvertFrom-UrlString -string $str
-        $ftpDirectories.DirectoryName = '/'
-
-
-        $ftpContent += [PSCustomObject]@{
-            "isDirectory" = if ($dirItem.Substring(0,1).ToLower() -eq 'd') {$true} else {$false}
-            "FileSize" = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[4]
-            "FileName" = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[8]
+        
+        $ftpContent.DirectoryItems += [PSCustomObject]@{
+            isDirectory = if ($dirItem.Substring(0,1).ToLower() -eq 'd') {$true} else {$false}
+            FileSize = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[4]
+            FileName = ($dirItem.Split(" ", 9, [System.StringSplitOptions]::RemoveEmptyEntries))[8]
         }
     }
+    $ftpDirectory += $ftpContent
+
+    if ($Recurse) {
+        $ftpDirectory.DirectoryItems.Where({$_.isDirectory}).ForEach({
+            $ftpDirectory += Get-FtpDirectoryContent -Uri $($Uri.OriginalString + $_.FileName + "/") -Recurse $true
+        })
+    }
+    
     $ftpResponseStream.Close()
     $ftpResponse.Close()
-    return $ftpContent
+    return $ftpDirectory
     #TODO to check if the string is URL encoded we can decode and compare with the original
 }
 function Copy-FileFromFtp {
@@ -134,6 +138,7 @@ function Copy-FileToFtp {
     }
    
     if ($Uri[$Uri.Length-1] -eq '/') {
+
         [string]$ftpFilePath = $Uri + $FileName
     }
     else {
@@ -170,24 +175,4 @@ function ConvertTo-UrlString {
     return [System.Web.HttpUtility]::UrlEncode($string)
 }
 
-$rootContent = Get-FtpDirectoryContent -uri $uri
-
-function Get-ChildContent () {
-
-
-}
-
-copy-fileFromFtp -Uri $uri -FileName "test1.txt" -LocalPath "c:\tmp\test1.txt"
-Copy-FileToFtp -Uri $uri -LocalPath "C:\tmp\01 - Давай Микрофон.flac"
-
-foreach ($file in $filesList) {
-    if ($file.isDirectory.ToLower() -eq "d") {
-
-        $localDir = New-Item -Path c:\tmp\$($file.FileName) -ItemType Directory 
-        #$remoteDir = $uri+$(file.FileName)+"/"
-        #$dirContent = Get-FtpDirectoryContent -Uri $remoteDir
-        
-    } else {
-        Copy-FileFromFtp -Uri $uri -FileName $file.FileName -LocalPath "c:\tmp"
-    }
-}
+$ftpContent = Get-FtpDirectoryContent -uri $uri -Recurse $true
