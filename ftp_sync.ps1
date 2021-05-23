@@ -1,6 +1,6 @@
 #$uri = "ftp://10.10.0.102/foobar2000 Music Folder/"
-$uri = New-Object -TypeName System.Uri -ArgumentList "ftp://10.10.0.106/foobar2000 Music Folder/"
-#$uri = "ftp://172.31.145.224/"
+#$uri = New-Object -TypeName System.Uri -ArgumentList "ftp://10.10.0.106/foobar2000 Music Folder/"
+$uri = New-Object -TypeName System.Uri -ArgumentList "ftp://172.31.145.224/"
 function Get-FtpRequest {
     [CmdletBinding()]
     Param(
@@ -61,8 +61,8 @@ function Get-FtpDirectoryContent {
         DirectoryName = @()
         DirectoryItems = @()
     }
-    $ftpDirectory = @()
-    $Recurse = $true
+    $ftpDirectory = @([pscustomObject]@{})
+    
     $ftpMethod = "ListDirectoryDetails"
     $ftpRequest = Get-FtpRequest -Method $ftpMethod -Uri $uri.OriginalString
     $ftpResponse = $ftpRequest.GetResponse()
@@ -174,5 +174,17 @@ function ConvertTo-UrlString {
     )
     return [System.Web.HttpUtility]::UrlEncode($string)
 }
+function Invoke-FtpSync {
+    [CmdletBinding()]
+    Param(
+            [Parameter(Mandatory=$true)]
+            [string]$SourceUri,
+            [Parameter(Mandatory=$true)]
+            [string]$DestinationUri
+        )
+    $sourceFtpContent = Get-FtpDirectoryContent -Uri $SourceUri -Recurse
+    $destinationFtpContent = Get-FtpDirectoryContent -Uri $DestinationUri -Recurse
 
+    
+}
 $ftpContent = Get-FtpDirectoryContent -uri $uri -Recurse $true
