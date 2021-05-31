@@ -1,6 +1,6 @@
 #$uri = "ftp://10.10.0.102/foobar2000 Music Folder/"
-#$uri = New-Object -TypeName System.Uri -ArgumentList "ftp://10.10.0.106/foobar2000 Music Folder/"
-$uri = New-Object -TypeName System.Uri -ArgumentList "ftp://172.31.145.224/"
+$uri = New-Object -TypeName System.Uri -ArgumentList "ftp://10.10.0.106/foobar2000 Music Folder/"
+#$uri = New-Object -TypeName System.Uri -ArgumentList "ftp://172.31.145.224/"
 function Get-FtpRequest {
     [CmdletBinding()]
     Param(
@@ -56,15 +56,15 @@ function Get-FtpDirectoryContent {
         [Parameter(Mandatory=$false)]
         [bool]$Recurse
     )
-
-    $ftpContent = [PSCustomObject]@{
-        DirectoryName = @()
+    
+    $ftpContent = [pscustomobject]@{
+        DirectoryName = ""
         DirectoryItems = @()
     }
-    $ftpDirectory = @([pscustomObject]@{})
+    $ftpDirectory = @()
     
     $ftpMethod = "ListDirectoryDetails"
-    $ftpRequest = Get-FtpRequest -Method $ftpMethod -Uri $uri.OriginalString
+    $ftpRequest = Get-FtpRequest -Method $ftpMethod -Uri $Uri.OriginalString
     $ftpResponse = $ftpRequest.GetResponse()
     $ftpResponseStream = $ftpResponse.GetResponseStream()
     
@@ -182,9 +182,31 @@ function Invoke-FtpSync {
             [Parameter(Mandatory=$true)]
             [string]$DestinationUri
         )
-    $sourceFtpContent = Get-FtpDirectoryContent -Uri $SourceUri -Recurse
-    $destinationFtpContent = Get-FtpDirectoryContent -Uri $DestinationUri -Recurse
+    $sourceFtpContent = Get-FtpDirectoryContent -Uri $uri -Recurse $true
+    $destinationFtpContent = Get-FtpDirectoryContent -Uri $uri -Recurse $true
 
+    $delta = [PSCustomObject]@{
+        DirectoryName = @()
+        DirectoryItems = @()
+    }
+    $index = 0
+    
+        
+    }
     
 }
-$ftpContent = Get-FtpDirectoryContent -uri $uri -Recurse $true
+
+function compare-ftpcontent {
+    $sourceObject = [PSCustomObject]@{}
+    $destiantionObject =[PSCustomObject]@{}
+    $index = 0
+
+    foreach ($sourceItem in $sourceObject) {
+        foreach ($destinationItem in $destinationObject) {
+            if ($sourceItem.FileName -eq $destinationItem.FileName) {
+                index++
+                
+            }
+        }
+    }
+}
