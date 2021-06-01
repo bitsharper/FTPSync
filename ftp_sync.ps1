@@ -90,7 +90,7 @@ function Get-FtpDirectoryContent {
     $ftpResponseStream.Close()
     $ftpResponse.Close()
     return $ftpDirectory
-    #TODO to check if the string is URL encoded we can decode and compare with the original
+    #TODO to check if the string is URL encoded. Can compare decoded and original if eq then decode is required
 }
 function Compare-FtpFolderContent {
     [CmdletBinding()]
@@ -102,7 +102,6 @@ function Compare-FtpFolderContent {
         )
 
     $deltaObject = @()
-    $ReferenceFolder.DirectoryItems.Where({!$_.isDirectory})
     foreach ($refItem in $ReferenceFolder.DirectoryItems.Where({!$_.isDirectory})) {
         $index = 0
         foreach ($diffItem in $DifferenceFolder.DirectoryItems) {
@@ -114,6 +113,17 @@ function Compare-FtpFolderContent {
         }
     }
     return $deltaObject
+}
+
+function Compare-FtpDirectories {
+    [CmdletBinding()]
+    Param(
+            [Parameter(Mandatory=$true)]
+            [PSCustomObject]$Reference,
+            [Parameter(Mandatory=$true)]
+            [PSCustomObject]$Difference
+        )
+    foreach ($refDir in )    
 }
 function Copy-FileFromFtp {
     [CmdletBinding()]
