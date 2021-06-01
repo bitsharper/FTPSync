@@ -92,6 +92,29 @@ function Get-FtpDirectoryContent {
     return $ftpDirectory
     #TODO to check if the string is URL encoded we can decode and compare with the original
 }
+function Compare-FtpFolderContent {
+    [CmdletBinding()]
+    Param(
+            [Parameter(Mandatory=$true)]
+            [PSCustomObject]$ReferenceFolder,
+            [Parameter(Mandatory=$true)]
+            [PSCustomObject]$DifferenceFolder
+        )
+
+    $deltaObject = @()
+    $ReferenceFolder.DirectoryItems.Where({!$_.isDirectory})
+    foreach ($refItem in $ReferenceFolder.DirectoryItems.Where({!$_.isDirectory})) {
+        $index = 0
+        foreach ($diffItem in $DifferenceFolder.DirectoryItems) {
+            
+            if (($refItem.FileName -eq $diffItem.FileName) -and ($refItem.FileSize -eq $diffItem.FileSize)) { $index++ }
+        }
+        if ($index -eq 0) {
+            $deltaObject += $refItem
+        }
+    }
+    return $deltaObject
+}
 function Copy-FileFromFtp {
     [CmdletBinding()]
     Param(
@@ -182,31 +205,10 @@ function Invoke-FtpSync {
             [Parameter(Mandatory=$true)]
             [string]$DestinationUri
         )
-    $sourceFtpContent = Get-FtpDirectoryContent -Uri $uri -Recurse $true
-    $destinationFtpContent = Get-FtpDirectoryContent -Uri $uri -Recurse $true
+    $sourceContent = Get-FtpDirectoryContent -Uri $uri -Recurse $true
+    $destinationContent = Get-FtpDirectoryContent -Uri $uri -Recurse $true
 
-    $delta = [PSCustomObject]@{
-        DirectoryName = @()
-        DirectoryItems = @()
-    }
-    $index = 0
-    
-        
-    }
-    
+    Compare-FtpFolderContent -ReferenceFolder $sourceContent[0] -DifferenceFolder $destinationContent[0]
 }
+    
 
-function compare-ftpcontent {
-    $sourceObject = [PSCustomObject]@{}
-    $destiantionObject =[PSCustomObject]@{}
-    $index = 0
-
-    foreach ($sourceItem in $sourceObject) {
-        foreach ($destinationItem in $destinationObject) {
-            if ($sourceItem.FileName -eq $destinationItem.FileName) {
-                index++
-                
-            }
-        }
-    }
-}
