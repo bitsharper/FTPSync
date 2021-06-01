@@ -92,7 +92,7 @@ function Get-FtpDirectoryContent {
     return $ftpDirectory
     #TODO to check if the string is URL encoded. Can compare decoded and original if eq then decode is required
 }
-function Compare-FtpFolderContent {
+function Compare-FtpDirectoryContent {
     [CmdletBinding()]
     Param(
             [Parameter(Mandatory=$true)]
@@ -119,11 +119,19 @@ function Compare-FtpDirectories {
     [CmdletBinding()]
     Param(
             [Parameter(Mandatory=$true)]
-            [PSCustomObject]$Reference,
+            [PSCustomObject]$ReferenceObject,
             [Parameter(Mandatory=$true)]
-            [PSCustomObject]$Difference
+            [PSCustomObject]$DifferenceObject
         )
-    foreach ($refDir in )    
+    $deltaObject = @()
+    foreach ($refDir in $ReferenceObject.DirectoryName) {
+        $index = 0 
+        foreach ($diffDir in $DifferenceObject.DirectoryName) {
+            if ($refDir -eq $diffDir ) {$index++}
+        }
+        if ($index -eq 0) {$deltaObject += $refDir}
+    }
+    return $deltaObject    
 }
 function Copy-FileFromFtp {
     [CmdletBinding()]
@@ -218,7 +226,24 @@ function Invoke-FtpSync {
     $sourceContent = Get-FtpDirectoryContent -Uri $uri -Recurse $true
     $destinationContent = Get-FtpDirectoryContent -Uri $uri -Recurse $true
 
-    Compare-FtpFolderContent -ReferenceFolder $sourceContent[0] -DifferenceFolder $destinationContent[0]
+    Compare-FtpDirectoryContent -ReferenceFolder $sourceContent[0] -DifferenceFolder $destinationContent[0]
+    Compare-FtpDirectories -ReferenceObject $sourceContent -DifferenceObject $destinationContent
+}
+
+
+$testObject = [PSCustomObject]@{
+    DirectoryName = "/testDir/"
+    DirectoryItems = @(
+    [PSCustomObject]@{
+        isDerectory = $false
+        FileSize = 8
+        FileName = "test.mp3"
+    }, 
+    [PSCustomObject]@{
+        isDerectory = $false
+        FileSize = 9
+        FileName = "test1.mp3"}
+    )
 }
     
 
