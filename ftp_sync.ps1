@@ -1,6 +1,28 @@
 #$uri = "ftp://10.10.0.102/foobar2000 Music Folder/"
 $uri = New-Object -TypeName System.Uri -ArgumentList "ftp://10.10.0.106/foobar2000 Music Folder/"
 #$uri = New-Object -TypeName System.Uri -ArgumentList "ftp://172.31.145.224/"
+
+$testObject = [PSCustomObject]@{
+    DirectoryName = "/testDir/"
+    DirectoryItems = @(
+    [PSCustomObject]@{
+        isDerectory = $false
+        FileSize = 8
+        FileName = "test.mp3"
+    }, 
+    [PSCustomObject]@{
+        isDerectory = $false
+        FileSize = 9
+        FileName = "test1.mp3"}
+    )
+}
+
+$testContent = [PSCustomObject]@{
+    isDirectory = $false
+    FileSize = 89
+    FileName = "testfoobarContent.mp3"
+}    
+
 function Get-FtpRequest {
     [CmdletBinding()]
     Param(
@@ -124,13 +146,26 @@ function Compare-FtpDirectories {
             [PSCustomObject]$DifferenceObject
         )
     $deltaObject = @()
-    foreach ($refDir in $ReferenceObject.DirectoryName) {
-        $index = 0 
-        foreach ($diffDir in $DifferenceObject.DirectoryName) {
-            if ($refDir -eq $diffDir ) {$index++}
+
+    foreach ($refDir in $ReferenceObject) {
+        $dirIndex = 0 
+        foreach ($diffDir in $DifferenceObject) {
+            if ($refDir.DirectoryName -eq $diffDir.DirectoryName ) {
+                $dirIndex++
+                $dirContentDelta = Compare-FtpDirectoryContent -ReferenceFolder $refDir -DifferenceFolder $diffDir
+                if ($dirContentDelta.length -gt 0) {
+                    $deltaObject += [PSCustomObject]@{
+                        DirectoryName = $refDir.DirectoryName
+                        DirectoryItems = $dirContentDelta
+                    }
+                }
+            }
         }
-        if ($index -eq 0) {$deltaObject += $refDir}
+        if ($dirIndex -eq 0) {
+            $deltaObject += $refDir
+        }
     }
+
     return $deltaObject    
 }
 function Copy-FileFromFtp {
@@ -225,25 +260,8 @@ function Invoke-FtpSync {
         )
     $sourceContent = Get-FtpDirectoryContent -Uri $uri -Recurse $true
     $destinationContent = Get-FtpDirectoryContent -Uri $uri -Recurse $true
-
-    Compare-FtpDirectoryContent -ReferenceFolder $sourceContent[0] -DifferenceFolder $destinationContent[0]
-    Compare-FtpDirectories -ReferenceObject $sourceContent -DifferenceObject $destinationContent
-}
-
-
-$testObject = [PSCustomObject]@{
-    DirectoryName = "/testDir/"
-    DirectoryItems = @(
-    [PSCustomObject]@{
-        isDerectory = $false
-        FileSize = 8
-        FileName = "test.mp3"
-    }, 
-    [PSCustomObject]@{
-        isDerectory = $false
-        FileSize = 9
-        FileName = "test1.mp3"}
-    )
-}
     
-
+    $deltaContent = Compare-FtpDirectories -ReferenceObject $sourceContent -DifferenceObject $destinationContent
+    
+    
+}
