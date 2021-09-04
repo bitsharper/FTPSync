@@ -157,7 +157,7 @@ function Copy-FileFromFtp {
         [Parameter(Mandatory=$true)]
         [string]$LocalPath
     )
-
+    
     Write-Host Starting copying file $ftpFilePath to $Local
     $ftpMethod = "DownloadFile"
     $fileStream = New-Object System.IO.FileStream $LocalPath, 'Create', 'Write', 'Read'
@@ -254,8 +254,8 @@ function Invoke-FtpSync {
             if (!$file.isDirectory){
                 $dirName = "c:\tmp" + $item.DirectoryName.Trim().Replace("/","\")
                 $destinationUri = "$($SourceUri.GetComponents(13,1) + $item.DirectoryName + $file.FileName)"
-                write-host $destinationUri + " " + $dirname
-                #Copy-FileFromFtp -Uri $DestinationUri -LocalPath $$dirName
+                
+                Copy-FileFromFtp -Uri $DestinationUri -LocalPath $dirName -FileName 
             }
         }
     }
