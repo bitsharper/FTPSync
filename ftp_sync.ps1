@@ -1,27 +1,6 @@
-#$uri = "ftp://10.10.0.102/foobar2000 Music Folder/"
-$uri = New-Object -TypeName System.Uri -ArgumentList "ftp://10.10.0.106/foobar2000 Music Folder/"
+$uri0 = "ftp://10.10.0.106/foobar2000 Music Folder/"
+$uri1 = New-Object -TypeName System.Uri -ArgumentList "ftp://10.10.0.3/mp3/"
 #$uri = New-Object -TypeName System.Uri -ArgumentList "ftp://172.31.145.224/"
-
-$testObject = [PSCustomObject]@{
-    DirectoryName = "/testDir/"
-    DirectoryItems = @(
-    [PSCustomObject]@{
-        isDerectory = $false
-        FileSize = 8
-        FileName = "test.mp3"
-    }, 
-    [PSCustomObject]@{
-        isDerectory = $false
-        FileSize = 9
-        FileName = "test1.mp3"}
-    )
-}
-
-$testContent = [PSCustomObject]@{
-    isDirectory = $false
-    FileSize = 89
-    FileName = "testfoobarContent.mp3"
-}    
 
 function Get-FtpRequest {
     [CmdletBinding()]
@@ -36,8 +15,8 @@ function Get-FtpRequest {
     $ftpWebRequest.Method = [System.Net.WebRequestMethods+Ftp]::$Method
     $ftpWebRequest.UseBinary = $true
     $ftpCreds = New-Object -TypeName System.Net.NetworkCredential
-    $ftpCreds.UserName = 'test'
-    $ftpCreds.Password = 'test'
+    $ftpCreds.UserName = 'gentleman'
+    $ftpCreds.Password = 'test_pass'
     $ftpWebRequest.Credentials = $ftpCreds
     return $ftpWebRequest
 }
@@ -64,13 +43,15 @@ function Write-DataToStream {
         [Parameter(Mandatory=$true)]
         [String]$LocalPath
     )
-    $localPath = 
+
     $fileStream = New-Object System.IO.FileStream $LocalPath, 'Open', 'Read', 'Read'
     $fileStream.CopyTo($Stream)
     $fileStream.close()
     $Stream.Close()
 }
 function Get-FtpDirectoryContent {
+
+    #TODO decouple returning FTP response operations(stream and response close) and preparing content object.
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
@@ -174,18 +155,9 @@ function Copy-FileFromFtp {
         [Parameter(Mandatory=$true)]
         [string]$Uri,
         [Parameter(Mandatory=$true)]
-        [string]$FileName,
-        [Parameter(Mandatory=$true)]
         [string]$LocalPath
     )
-    
-    if ($Uri[$Uri.Length-1] -eq '/') {
-        $ftpFilePath = $Uri + $($FileName)
-    }
-    else {
-        $ftpFilePath =  $Uri + "/$($Filename)"
-    }
-    
+
     Write-Host Starting copying file $ftpFilePath to $Local
     $ftpMethod = "DownloadFile"
     $fileStream = New-Object System.IO.FileStream $LocalPath, 'Create', 'Write', 'Read'
@@ -250,6 +222,20 @@ function ConvertTo-UrlString {
     )
     return [System.Web.HttpUtility]::UrlEncode($string)
 }
+function Get-ContentDelta {
+    [CmdletBinding()]
+    Param(
+            [Parameter(Mandatory=$true)]
+            [string]$SourceUri,
+            [Parameter(Mandatory=$true)]
+            [string]$DestinationUri
+        )
+    #TODO add check for source and destination
+    $sourceContent = Get-FtpDirectoryContent -Uri $uri0 -Recurse $true
+    $destinationContent = Get-FtpDirectoryContent -Uri $uri1 -Recurse $true
+    $deltaContent = Compare-FtpDirectories -ReferenceObject $sourceContent -DifferenceObject $destinationContent
+    return $deltaContent
+}
 function Invoke-FtpSync {
     [CmdletBinding()]
     Param(
@@ -258,10 +244,44 @@ function Invoke-FtpSync {
             [Parameter(Mandatory=$true)]
             [string]$DestinationUri
         )
-    $sourceContent = Get-FtpDirectoryContent -Uri $uri -Recurse $true
-    $destinationContent = Get-FtpDirectoryContent -Uri $uri -Recurse $true
+
+    [System.Uri]$SourceUri = $uri0
+    [System.Uri]$DestinationUri = $uri1
+    $syncContent = Get-ContentDelta -SourceUri $SourceUri -DestinationUri $DestinationUri
     
-    $deltaContent = Compare-FtpDirectories -ReferenceObject $sourceContent -DifferenceObject $destinationContent
-    
-    
+    ForEach ($item in $syncContent) {
+        ForEach ($file in $item.DirectoryItems) {
+            if (!$file.isDirectory){
+                $dirName = "c:\tmp" + $item.DirectoryName.Trim().Replace("/","\")
+                $destinationUri = "$($SourceUri.GetComponents(13,1) + $item.DirectoryName + $file.FileName)"
+                write-host $destinationUri + " " + $dirname
+                #Copy-FileFromFtp -Uri $DestinationUri -LocalPath $$dirName
+            }
+        }
+    }
 }
+
+Invoke-FtpSync -SourceUri $uri0 -DestinationUri $uri1
+
+<#
+$testObject = [PSCustomObject]@{
+    DirectoryName = "/testDir/"
+    DirectoryItems = @(
+    [PSCustomObject]@{
+        isDerectory = $false
+        FileSize = 8
+        FileName = "test.mp3"
+    }, 
+    [PSCustomObject]@{
+        isDerectory = $false
+        FileSize = 9
+        FileName = "test1.mp3"}
+    )
+}
+
+$testContent = [PSCustomObject]@{
+    isDirectory = $false
+    FileSize = 89
+    FileName = "testfoobarContent.mp3"
+}    
+#>
